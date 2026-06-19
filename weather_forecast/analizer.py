@@ -35,3 +35,22 @@ def load_data():
             cursor.close()
         if conn:
             conn.close()
+
+#Loading data from the database            
+df_weather = load_data()  
+
+if not df_weather.empty:
+    df_weather['Hour'] = pd.to_datetime(df_weather['Hour'])
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("Evolución de la temperatura a lo largo del tiempo")
+        #Line chart to show temperature evolution over time
+        st.line_chart(data=df_weather, x='Hour', y='Temperature')
+        
+    with col2:
+        st.subheader("datos meteorológicos") 
+        st.dataframe(df_weather)
+else:
+    st.warning("No se encontraron datos para mostrar. Por favor, asegúrate de que los datos se hayan insertado correctamente en la base de datos.")         
