@@ -40,3 +40,9 @@ try:
     print(f"{count} records inserted successfully")
 except Exception as e:
     print(f"An error occurred: {e}")
+finally:
+    if cursor:
+        cursor.close()
+    if conn:
+        conn.close()
+    print("Database connection closed")
