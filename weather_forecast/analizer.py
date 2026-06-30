@@ -64,9 +64,9 @@ if not df_weather.empty:
     # Gráfico comparativo de temperatura y sensación térmica
     st.subheader("Comparación de Temperatura y Sensación Térmica")
     
-    columna_fecha = 'Hour'  # o 'hour' si cambiaste la query
-    columna_temp = 'Temperatura'      # o 'temperature'
-    columna_sens = 'Sensación térmica' # <-- CAMBIA ESTO por 'Sensación térmica' si en Postgres la creaste como 'Sensación térmica'
+    columna_fecha = 'Hour'  
+    columna_temp = 'Temperatura'    
+    columna_sens = 'Sensación térmica' 
     df_graph = df_weather[[columna_fecha, columna_temp, columna_sens]].copy()
     df_graph.columns = ['Hora', 'Temperatura', 'Sensación térmica']
     

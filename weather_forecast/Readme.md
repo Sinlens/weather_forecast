@@ -3,7 +3,7 @@
 Dashboard de monitoreo y análisis de pronóstico climático construido con un pipeline ETL en python y visualización en streamlit. Extrae datos de la APO de Open-Meteo, se transforman para luego ser almacenados y con ello hacer un analisís de pronóstico.
 
 # Demo
-![dashboard preview](preview.webp)
+![demo dashboard](docs/preview.webp)
 ---
 ## Indice
 
@@ -140,7 +140,7 @@ weather_forecast/
  
 Mejoras planeadas para convertir esto en un proyecto de portafolio completo:
  
-- [ ] Agregar sensación térmica, humedad y velocidad del viento
+- [x] Agregar sensación térmica, humedad y velocidad del viento
 - [ ] Implementar seguimiento de precisión del pronóstico (predicho vs. real)
 - [ ] Comparación entre múltiples ciudades de Colombia
 - [ ] Tests unitarios con pytest
