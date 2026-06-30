@@ -1,4 +1,4 @@
-#Weather Forecast Monitor
+#  Weather Forecast Monitor
 
 Dashboard de monitoreo y análisis de pronóstico climático construido con un pipeline ETL en python y visualización en streamlit. Extrae datos de la APO de Open-Meteo, se transforman para luego ser almacenados y con ello hacer un analisís de pronóstico.
 

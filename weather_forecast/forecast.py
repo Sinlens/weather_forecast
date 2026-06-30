@@ -1,7 +1,7 @@
 import requests
 import psycopg2
 
-url="https://archive-api.open-meteo.com/v1/archive?latitude=9.3045&longitude=-75.3905&start_date=2026-06-01&end_date=2026-06-15&hourly=temperature_2m"
+url="https://archive-api.open-meteo.com/v1/archive?latitude=9.3045&longitude=-75.3905&start_date=2026-06-01&end_date=2026-06-15&hourly=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m"
 
 try:
     #Extracting data from the API
@@ -10,9 +10,10 @@ try:
     
     hours=data['hourly']['time']
     temps=data['hourly']['temperature_2m']
+    sensible_temp=data['hourly']['apparent_temperature']
+    humidity=data['hourly']['relative_humidity_2m']
+    wind_speed=data['hourly']['wind_speed_10m']
     city="Sincelejo"
-    
-    print(f"there is {len(hours)} records to be inserted into the database")
     
     #Connecting to the database
     conn = psycopg2.connect(
@@ -31,10 +32,10 @@ try:
     cursor.execute("CREATE TABLE IF NOT EXISTS weather_forecast (id SERIAL PRIMARY KEY, city VARCHAR(255), hour TIMESTAMP, temperature FLOAT)")
     
     count=0
-    for hour, temp in zip(hours, temps):
+    for hour, temp, sensa, hum, wind in zip(hours, temps, sensible_temp, humidity, wind_speed):
         #inserting data into the database
-        insert_query = "INSERT INTO weather_forecast (city, hour, temperature) VALUES (%s, %s, %s)"
-        cursor.execute(insert_query, (city, hour, temp))
+        insert_query = "INSERT INTO weather_forecast (city, hour, temperature, sens, humidity, wind_speed) VALUES (%s, %s, %s, %s, %s, %s)"
+        cursor.execute(insert_query, (city, hour, temp, sensa, hum, wind))
         count+=1
     conn.commit()
     print(f"{count} records inserted successfully")
