@@ -39,51 +39,52 @@ for attempt in range(1, Max_attempts + 1):
         #retrying after a delay if the request fails
         logging.info(f"Retrying in {Delay_s} seconds...")
         time.sleep(Delay_s)
+        break
         
-    if Data_api is None:
+if Data_api is None:
         #warning message if the data extraction fails after all attempts
         logging.critical("failed to retrieve data from the API")
-    else:
-        try:
-            logging.info("Processing the data and inserting it into the database")
+else:
+    try:
+        logging.info("Processing the data and inserting it into the database")
              
-            #Connecting to the database
-            conn = psycopg2.connect(
-                host="localhost",
-                database="postgres",
-                user="postgres",
-                password="Akira123",
-                port="5432"
-            )    
-            hours = Data_api['hourly']['time']
-            temps = Data_api['hourly']['temperature_2m']
-            sensible_temp=Data_api['hourly']['apparent_temperature']
-            humidity=Data_api['hourly']['relative_humidity_2m']
-            wind_speed=Data_api['hourly']['wind_speed_10m']
-            city="Sincelejo"
+        #Connecting to the database
+        conn = psycopg2.connect(
+            host="localhost",
+            database="postgres",
+            user="postgres",
+            password="Akira123",
+            port="5432"
+        )    
+        hours = Data_api['hourly']['time']
+        temps = Data_api['hourly']['temperature_2m']
+        sensible_temp=Data_api['hourly']['apparent_temperature']
+        humidity=Data_api['hourly']['relative_humidity_2m']
+        wind_speed=Data_api['hourly']['wind_speed_10m']
+        city="Sincelejo"
     
             
-            conn.set_client_encoding('UTF8')
-            cursor = conn.cursor()
+        conn.set_client_encoding('UTF8')
+        cursor = conn.cursor()
     
-            logging.info("Connected to the database successfully")
+        logging.info("Connected to the database successfully")
     
-            #creating the table if it doesn't exist
-            cursor.execute("CREATE TABLE IF NOT EXISTS weather_forecast (id SERIAL PRIMARY KEY, city VARCHAR(255), hour TIMESTAMP, temperature FLOAT)")
+        #creating the table if it doesn't exist
+        cursor.execute("CREATE TABLE IF NOT EXISTS weather_forecast (id SERIAL PRIMARY KEY, city VARCHAR(255), hour TIMESTAMP, temperature FLOAT, sens FLOAT, humidity FLOAT, wind_speed FLOAT)")
     
-            count=0
-            for hour, temp, sensa, hum, wind in zip(hours, temps, sensible_temp, humidity, wind_speed):
-                #inserting data into the database
-                insert_query = "INSERT INTO weather_forecast (city, hour, temperature, sens, humidity, wind_speed) VALUES (%s, %s, %s, %s, %s, %s)"
-                cursor.execute(insert_query, (city, hour, temp, sensa, hum, wind))
-                count+=1
-                conn.commit()
-                logging.info(f"{count} records inserted successfully")
-        except Exception as e:
-            logging.critical(f"An error occurred: {e}")
-        finally:
-            if cursor in locals():
-                cursor.close()
-            if conn in locals():
-                conn.close()
-            logging.info("Database connection closed")
+        count=0
+        for hour, temp, sensa, hum, wind in zip(hours, temps, sensible_temp, humidity, wind_speed):
+            #inserting data into the database
+            insert_query = "INSERT INTO weather_forecast (city, hour, temperature, sens, humidity, wind_speed) VALUES (%s, %s, %s, %s, %s, %s)"
+            cursor.execute(insert_query, (city, hour, temp, sensa, hum, wind))
+            count+=1
+            conn.commit()
+            logging.info(f"{count} records inserted successfully")
+    except Exception as e:
+        logging.critical(f"An error occurred: {e}")
+    finally:
+        if cursor in locals():
+            cursor.close()
+        if conn in locals():
+            conn.close()
+        logging.info("Database connection closed")
