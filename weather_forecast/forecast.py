@@ -50,7 +50,7 @@ else:
              
         #Connecting to the database
         conn = psycopg2.connect(
-            host="localhost",
+            host="host.docker.internal",
             database="postgres",
             user="postgres",
             password="Akira123",
