@@ -70,7 +70,7 @@ else:
         logging.info("Connected to the database successfully")
     
         #creating the table if it doesn't exist
-        cursor.execute("CREATE TABLE IF NOT EXISTS weather_forecast (id SERIAL PRIMARY KEY, city VARCHAR(255), hour TIMESTAMP, temperature FLOAT, sens FLOAT, humidity FLOAT, wind_speed FLOAT)")
+        cursor.execute("CREATE TABLE IF NOT EXISTS weather_forecast (id SERIAL PRIMARY KEY, city VARCHAR(255), hour TIMESTAMP UNIQUE, temperature FLOAT, sens FLOAT, humidity FLOAT, wind_speed FLOAT)")
     
         count=0
         for hour, temp, sensa, hum, wind in zip(hours, temps, sensible_temp, humidity, wind_speed):
