@@ -1,6 +1,9 @@
 import streamlit as st
 import pandas as pd
 import psycopg2
+from dotenv import load_dotenv
+import os
+load_dotenv()  # Load environment variables from .env file
 
 #Setting up the Streamlit page configuration
 st.set_page_config(page_title="Weather Forecast Analysis", layout="wide")
@@ -13,11 +16,11 @@ def load_data():
     try:
         #Connecting to the database
         conn = psycopg2.connect(
-            host="localhost",
-            database="postgres",
-            user="postgres",
-            password="Akira123",
-            port="5432"
+            host=os.getenv("DB_HOST", "localhost"),
+            database=os.getenv("DB_NAME", "postgres"),
+            user=os.getenv("DB_USER", "postgres"),
+            password=os.getenv("DB_PASSWORD"),
+            port=os.getenv("DB_PORT","5432")
         )
         conn.set_client_encoding('UTF8')
         cursor = conn.cursor()
