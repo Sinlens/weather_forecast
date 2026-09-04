@@ -42,7 +42,6 @@ for attempt in range(1, Max_attempts + 1):
         #retrying after a delay if the request fails
         logging.info(f"Retrying in {Delay_s} seconds...")
         time.sleep(Delay_s)
-        break
         
 if Data_api is None:
         #warning message if the data extraction fails after all attempts
