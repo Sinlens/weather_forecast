@@ -2,6 +2,9 @@ import requests
 import psycopg2
 import logging
 import time
+from dotenv import load_dotenv
+import os
+load_dotenv()  # Load environment variables from .env file
 
 # setting up logging
 logging.basicConfig(
@@ -50,11 +53,11 @@ else:
              
         #Connecting to the database
         conn = psycopg2.connect(
-            host="host.docker.internal",
-            database="postgres",
-            user="postgres",
-            password="Akira123",
-            port="5432"
+            host=os.getenv("DB_HOST", "localhost"),
+            database=os.getenv("DB_NAME", "postgres"),
+            user=os.getenv("DB_USER", "postgres"),
+            password=os.getenv("DB_PASSWORD"),
+            port=os.getenv("DB_PORT","5432")
         )    
         hours = Data_api['hourly']['time']
         temps = Data_api['hourly']['temperature_2m']
