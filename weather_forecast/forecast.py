@@ -26,26 +26,25 @@ logging.info("Starting the data extraction process")
 
 for attempt in range(1, Max_attempts + 1):
     try:
-        logging.info("Getting data from the API")
+        logging.info(f"Attempt {attempt}/{Max_attempts}: Getting data from the API")
         response = requests.get(url, timeout=10)
 
         if response.status_code == 200:
             Data_api = response.json()
-            logging.info("Data extraction successful")
+            logging.info(f"Data extraction successful on attempt {attempt}/{Max_attempts}")
             break
         else:
-            logging.warning(f"The API request failed with status code {response.status_code}")
+            logging.warning(f"Attempt {attempt}/{Max_attempts}:The API request failed with status code {response.status_code}")
     except requests.exceptions.RequestException as e:
-        logging.error(f"An error occurred during the API request: {e}.")
-    
+        logging.error(f"Attempt {attempt}/{Max_attempts}: error during API request: {e}")
     if attempt < Max_attempts:
         #retrying after a delay if the request fails
         logging.info(f"Retrying in {Delay_s} seconds...")
         time.sleep(Delay_s)
         
 if Data_api is None:
-        #warning message if the data extraction fails after all attempts
-        logging.critical("failed to retrieve data from the API")
+    #warning message if the data extraction fails after all attempts
+    logging.critical(f"failed to retrieve data from the API after {Max_attempts} attempts.")
 else:
     try:
         logging.info("Processing the data and inserting it into the database")
