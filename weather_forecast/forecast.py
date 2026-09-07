@@ -75,8 +75,8 @@ else:
     
         count=0
         for hour, temp, sensa, hum, wind in zip(hours, temps, sensible_temp, humidity, wind_speed):
-            #inserting data into the database
-            insert_query = "INSERT INTO weather_forecast (city, hour, temperature, sens, humidity, wind_speed) VALUES (%s, %s, %s, %s, %s, %s)"
+            #inserting data into the database; ON CONFLICT (hour) DO NOTHING makes the script idempotent — re-runs skip hours already present instead of failing on the UNIQUE constraint
+            insert_query = "INSERT INTO weather_forecast (city, hour, temperature, sens, humidity, wind_speed) VALUES (%s, %s, %s, %s, %s, %s) ON CONFLICT (hour) DO NOTHING"
             cursor.execute(insert_query, (city, hour, temp, sensa, hum, wind))
             count+=1
             conn.commit()
