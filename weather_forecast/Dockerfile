@@ -1,13 +1,22 @@
-#setting the base image to use for the container
-from python:3.11-slim
-#setting the working directory inside the container
-WORKDIR /app
-#copying the requirements file to the working directory
-COPY requirements.txt .
-#installing the dependencies from the requirements file
-run pip install --no-cache-dir -r requirements.txt
+# Setting the base image to use for the container
+FROM python:3.11-slim
 
-#copying the rest of the application code to the working directory
+# Setting the working directory inside the container
+WORKDIR /app
+
+# Installing system dependencies for psycopg2-binary
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copying the requirements file to the working directory
+COPY requirements.txt .
+
+# Installing the dependencies from the requirements file
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copying the rest of the application code to the working directory
 COPY . .
-#setting the command to run the application when the container starts
-CMD ["python", "forecast.py"]
+
+# Setting the command to run the application when the container starts
+CMD ["python", "forecast.py", "--rate", "0.2"]
