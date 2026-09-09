@@ -21,6 +21,7 @@ import logging
 import os
 import sys
 import time
+from datetime import datetime
 from pathlib import Path
 
 import psycopg2
@@ -122,26 +123,28 @@ def connect_db():
     return conn
 
 
-def insert_batch(cursor, conn, city, hours, temps, sens, hum, wind):
-    """Insert hourly rows for one city with ON CONFLICT (city, hour) DO NOTHING."""
+def insert_batch(cursor, conn, city, hours, temps, sens, hum, wind, run_at):
+    """Insert hourly rows for one city with ON CONFLICT (city, hour) DO NOTHING.
+    run_at: timestamp when this forecast batch was generated (used by accuracy tracking)."""
     sql = (
         "INSERT INTO weather_forecast "
-        "(city, hour, temperature, sens, humidity, wind_speed) "
-        "VALUES (%s, %s, %s, %s, %s, %s) "
+        "(city, hour, temperature, sens, humidity, wind_speed, forecast_run_at) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s) "
         "ON CONFLICT (city, hour) DO NOTHING"
     )
     name = city["name"]
     rows = list(zip(hours, temps, sens, hum, wind))
     inserted = 0
     for h, t, s, hu, w in rows:
-        cursor.execute(sql, (name, h, t, s, hu, w))
+        cursor.execute(sql, (name, h, t, s, hu, w, run_at))
         inserted += cursor.rowcount
     conn.commit()
     return inserted, len(rows)
 
 
 def ensure_schema(cursor):
-    """CREATE TABLE IF NOT EXISTS with composite UNIQUE(city, hour)."""
+    """CREATE TABLE IF NOT EXISTS with composite UNIQUE(city, hour).
+    Idempotent: handles pre-existing tables from earlier migrations."""
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS weather_forecast (
@@ -152,6 +155,7 @@ def ensure_schema(cursor):
             sens FLOAT,
             humidity FLOAT,
             wind_speed FLOAT,
+            forecast_run_at TIMESTAMP DEFAULT NOW(),
             CONSTRAINT weather_forecast_city_hour_key UNIQUE (city, hour)
         )
         """
@@ -159,6 +163,10 @@ def ensure_schema(cursor):
     cursor.execute(
         "CREATE INDEX IF NOT EXISTS idx_weather_forecast_city "
         "ON weather_forecast(city)"
+    )
+    cursor.execute(
+        "CREATE INDEX IF NOT EXISTS idx_weather_forecast_run_at "
+        "ON weather_forecast(forecast_run_at)"
     )
     # Backfill city='UNKNOWN' for any pre-migration rows with NULL city
     cursor.execute(
@@ -195,6 +203,7 @@ def main():
     skipped = 0
     total_inserted = 0
     start = time.time()
+    run_at = datetime.now()  # single timestamp for entire batch
 
     for idx, city in enumerate(cities, 1):
         name = city["name"]
@@ -205,7 +214,7 @@ def main():
                 logging.warning(f"[{idx}/{len(cities)}] {name}: FAILED after retries")
             else:
                 hours, temps, sens, hum, wind = data
-                ins, total = insert_batch(cursor, conn, city, hours, temps, sens, hum, wind)
+                ins, total = insert_batch(cursor, conn, city, hours, temps, sens, hum, wind, run_at)
                 total_inserted += ins
                 if ins == 0:
                     skipped += 1

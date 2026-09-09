@@ -3,6 +3,10 @@ __pycache__/
 .env
 venv/
 *.log
+*.err
+streamlit_run.log
+streamlit_run.err
 pipeline_full_run.log
 pipeline_full_run.log.err
+actual_pipeline.log
 data/raw/

@@ -65,7 +65,7 @@ Demonstrates a production-shaped data pipeline at small scale:
 | Layer | Tool |
 |---|---|
 | Language | Python 3.11+ |
-| Extraction | `requests`, Open-Meteo API |
+| Extraction | `requests`, Open-Meteo Forecast API + Archive API |
 | Geo data | DANE Marco Geoestadístico Nacional 2025 (ArcGIS REST layer 317) |
 | Persistence | PostgreSQL 18 |
 | Visualization | Streamlit |
@@ -84,6 +84,7 @@ Demonstrates a production-shaped data pipeline at small scale:
 - **Rate limiting** (`--rate` flag, default 0.5s) to respect Open-Meteo's fair-use policy
 - **Filterable Streamlit UI** — search by name or department, dropdown over 1,122 options
 - **Config-driven coverage** — `--limit`, `--cities`, default = all
+- **Forecast accuracy tracking** — MAE per city across temperature, sens. térmica, humidity, wind speed (T10)
 
 ---
 
@@ -138,10 +139,19 @@ Dashboard runs at `http://localhost:8501`.
 ### CLI arguments
 
 ```bash
+# Forecast pipeline (predictions)
 python forecast.py                  # all 1,122 municipalities (~30 min at --rate 0.2)
 python forecast.py --limit 10       # first 10 (smoke test, ~30s)
 python forecast.py --cities 70001,11001   # specific DANE codes (Sincelejo, Bogotá)
 python forecast.py --rate 0.3       # seconds between requests (default 0.5)
+
+# Actual weather pipeline (observations from past days)
+python actual_weather.py --days 7    # fetch 7 days of observed data (default)
+python actual_weather.py --limit 5  # smoke test on 5 cities
+
+# Accuracy computation (MAE per city per metric)
+python compute_accuracy.py          # compute MAE, store in weather_accuracy
+python compute_accuracy.py --city "BOGOTÁ, D.C."   # single city
 ```
 
 ### Useful SQL queries
@@ -157,6 +167,33 @@ SELECT city, COUNT(*) AS rows, MIN(hour) AS from_, MAX(hour) AS to_
 FROM weather_forecast
 GROUP BY city
 ORDER BY rows DESC;
+
+-- Latest MAE per city per metric
+SELECT DISTINCT ON (city, metric) city, metric, mae, n_samples, computed_at
+FROM weather_accuracy
+ORDER BY city, metric, computed_at DESC;
+```
+
+### How accuracy tracking works
+
+The pipeline computes **MAE (Mean Absolute Error)** per city per metric by JOINing `weather_forecast` (predictions) against `weather_actual` (observations from Open-Meteo Archive API) on `(city, hour)`.
+
+**Important caveat:** Open-Meteo's `forecast` API returns observed values for `past_days=7`, not predictions made in the past. Only `forecast_days=7` values are true predictions. MAE only counts rows where `forecast_run_at < hour` — i.e., predictions made before the hour they forecast.
+
+**What this means in practice:**
+
+- Right after a fresh pipeline run, MAE = 0 (because no `forecast_days` hours have passed yet)
+- As time runs and the pipeline re-runs (via cron, T12), MAE starts to accumulate
+- For meaningful MAE numbers, the pipeline needs to run continuously for several days
+
+**To populate MAE:**
+
+```bash
+# One-time: backfill actuals for past week
+python actual_weather.py --days 7
+
+# After a forecast run + wait + actuals run, compute MAE
+python compute_accuracy.py
 ```
 
 ---
@@ -166,7 +203,9 @@ ORDER BY rows DESC;
 ```
 weather_forecast/
 ├── analizer.py                       # Streamlit dashboard
-├── forecast.py                       # Multi-city extraction pipeline
+├── forecast.py                       # Multi-city forecast pipeline (T9)
+├── actual_weather.py                 # Multi-city observed weather pipeline (T10)
+├── compute_accuracy.py               # MAE computation forecast vs actual (T10)
 ├── requirements.txt
 ├── Dockerfile                        # Container build (FROM python:3.11-slim)
 ├── .env.example                      # Template for credentials (DB_HOST, etc.)
@@ -180,7 +219,9 @@ weather_forecast/
 │   └── preview.webp                  # Dashboard screenshot
 ├── scripts/
 │   ├── fetch_colombia_geojson.py     # DANE → colombia.json
-│   └── migrate_unique_city_hour.sql  # DB schema migration (idempotent)
+│   ├── migrate_unique_city_hour.sql  # UNIQUE(hour) → UNIQUE(city, hour)
+│   ├── migrate_add_weather_actual.sql # weather_actual table for accuracy (T10)
+│   └── migrate_add_forecast_run_at.sql # forecast_run_at column (T10)
 └── pipeline.log                      # Rolling log (gitignored)
 ```
 
@@ -196,10 +237,11 @@ weather_forecast/
 - [x] Retry loop with backoff
 - [x] Config-driven coverage from official DANE source
 - [x] Filterable Streamlit dashboard
+- [x] Accuracy tracking infrastructure (T10): weather_actual table, MAE storage, dashboard display
+  - MAE values accumulate as the pipeline runs over time (true predictions need hours to become past)
 
-### Next (T10-T12)
+### Next (T11-T12)
 
-- [ ] Accuracy tracking: compare forecast vs. actuals (Open-Meteo Archive API) with MAE per city
 - [ ] pytest scaffold + GitHub Actions CI (lint + tests on push)
 - [ ] Scheduled extraction via GitHub Actions cron (every 6h)
 - [ ] Streamlit Cloud public deploy
