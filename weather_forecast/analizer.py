@@ -68,6 +68,37 @@ def load_data(city_name):
             pass
 
 
+@st.cache_data(ttl=600)
+def load_accuracy(city_name):
+    """Fetch MAE metrics for one city from weather_accuracy. Cached 10 min."""
+    try:
+        conn = psycopg2.connect(
+            host=os.getenv("DB_HOST", "localhost"),
+            database=os.getenv("DB_NAME", "postgres"),
+            user=os.getenv("DB_USER", "postgres"),
+            password=os.getenv("DB_PASSWORD"),
+            port=os.getenv("DB_PORT", "5432"),
+        )
+        conn.set_client_encoding("UTF8")
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT metric, mae, n_samples, computed_at "
+            "FROM weather_accuracy WHERE city = %s "
+            "ORDER BY computed_at DESC, metric",
+            (city_name,),
+        )
+        rows = cursor.fetchall()
+        return rows
+    except Exception as e:
+        return []
+    finally:
+        try:
+            cursor.close()
+            conn.close()
+        except Exception:
+            pass
+
+
 # ---------- UI ----------
 
 st.set_page_config(page_title="Weather Forecast Analysis", layout="wide")
@@ -151,6 +182,42 @@ df_graph2 = df_weather[["Hour", "Humedad", "Velocidad del viento"]].copy()
 df_graph2.columns = ["Hora", "Humedad (%)", "Viento (m/s)"]
 st.line_chart(data=df_graph2, x="Hora",
               y=["Humedad (%)", "Viento (m/s)"])
+
+# --- Accuracy (T10) ---
+st.markdown("---")
+st.subheader("Precisión del forecast (MAE)")
+
+acc_rows = load_accuracy(city_name)
+if acc_rows:
+    # Show most recent run's MAE per metric
+    by_metric = {}
+    for metric, mae, n, computed_at in acc_rows:
+        if metric not in by_metric:  # first (most recent) per metric
+            by_metric[metric] = (mae, n, computed_at)
+    cols = st.columns(4)
+    metric_labels = {
+        "temperature": ("Temperatura", "°C"),
+        "sens": ("Sensación térmica", "°C"),
+        "humidity": ("Humedad", "%"),
+        "wind_speed": ("Viento", "m/s"),
+    }
+    for col, key in zip(cols, ["temperature", "sens", "humidity", "wind_speed"]):
+        with col:
+            if key in by_metric:
+                mae, n, computed_at = by_metric[key]
+                st.metric(
+                    metric_labels[key][0],
+                    f"{mae:.2f} {metric_labels[key][1]}",
+                    delta=f"n={n}",
+                )
+            else:
+                st.metric(metric_labels[key][0], "—")
+else:
+    st.info(
+        "Sin datos de accuracy todavía. MAE se acumula cuando horas pronosticadas "
+        "pasan y se comparan con valores reales. Mientras tanto: "
+        "`python actual_weather.py --days 7 && python compute_accuracy.py`."
+    )
 
 with st.expander("Ver tabla de datos"):
     st.dataframe(df_weather, width="stretch")
